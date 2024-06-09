@@ -25,8 +25,7 @@ function NewCommentForm({ place, onSubmit }) {
         setComment({
             content: '',
             stars: 3,
-            rant: false,
-            authorId: 1
+            rant: false
         })
     }
 
