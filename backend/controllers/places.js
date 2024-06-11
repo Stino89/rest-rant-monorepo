@@ -13,6 +13,9 @@ router.post('/', async (req, res) => {
     if (!req.body.state) {
         req.body.state = 'USA'
     }
+    if(req.currentUser?.role !== 'admin'){
+        return res.status(403).json({ message: 'You are not authorized to create a place.' })
+    }
     const place = await Place.create(req.body)
     res.json(place)
 })
@@ -59,11 +62,16 @@ router.put('/:placeId', async (req, res) => {
             await place.save()
             res.json(place)
         }
+    }if(req.currentUser?.role !== 'admin'){
+        return res.status(403).json({ message: 'You are not authorized to update a place.' })
     }
 })
 
 router.delete('/:placeId', async (req, res) => {
     let placeId = Number(req.params.placeId)
+    if (req.currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: 'You are not authorized to delete a place.' })
+    }
     if (isNaN(placeId)) {
         res.status(404).json({ message: `Invalid id "${placeId}"` })
     } else {
@@ -94,30 +102,19 @@ router.post('/:placeId/comments', async (req, res) => {
         res.status(404).json({ message: `Could not find place with id "${placeId}"` })
     }
 
-    let currentUser
-    try {
-        currentUser = await User.findOne({
-            where: {
-                userId: req.session.userId
-            }
-        })
-    } catch {
-        currentUser = null
-    }
-
-    if (!currentUser) {
+    if (!req.currentUser) {
         return res.status(404).json({ message: 'You must be logged in to leave a rant or a rave.' })
     }
 
     const comment = await Comment.create({
         ...req.body,
-        authorId: currentUser.userId,
+        authorId: req.currentUser.userId,
         placeId: placeId
     })
 
     res.send({
         ...comment.toJSON(),
-        author: currentUser
+        author: req.currentUser
     })
 })
 
@@ -135,6 +132,8 @@ router.delete('/:placeId/comments/:commentId', async (req, res) => {
         })
         if (!comment) {
             res.status(404).json({ message: `Could not find comment with id "${commentId}" for place with id "${placeId}"` })
+        } else if (comment.authorId !== req.currentUser?.userId) {
+            res.status(403).json({ message: 'You are not authorized to delete this comment.' })
         } else {
             await comment.destroy()
             res.json(comment)

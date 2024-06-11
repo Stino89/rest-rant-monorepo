@@ -9,6 +9,7 @@ async function defineCurrentUser(req, res, next) {
         })
         req.currentUser = user
     } catch (e) {
+        req.currentUser = null
         console.error(e)
     }
     next()
